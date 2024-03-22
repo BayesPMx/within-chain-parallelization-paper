@@ -11,8 +11,8 @@ n_subjects <- read_csv("depot_1cmt_linear/Data/depot_1cmt_prop.csv",
   deframe()
 
 write_inits <- function(run, chain){
-  list(TVCL = rlnorm(1, log(4), 0.3),
-       TVVC = rlnorm(1, log(70), 0.3),
+  list(TVCL = rlnorm(1, log(0.5), 0.3),
+       TVVC = rlnorm(1, log(12), 0.3),
        TVKA = rlnorm(1, log(1), 0.3),
        omega = rlnorm(3, log(0.3), 0.3),
        sigma = rlnorm(1, log(0.2), 0.3),
