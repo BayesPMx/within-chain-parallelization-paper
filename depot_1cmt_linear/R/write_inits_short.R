@@ -2,6 +2,7 @@ rm(list = ls())
 cat("\014")
 
 library(tidyjson)
+library(cmdstanr)
 library(tidyverse)
 
 n_subjects <- read_csv("depot_1cmt_linear/Data/depot_1cmt_prop.csv",
@@ -20,7 +21,7 @@ write_inits <- function(run, chain){
        L = diag(3),
        Z = matrix(rnorm(n_subjects*3), ncol = n_subjects, nrow = 3)) %>% 
     map(round, 3) %>% 
-    write_stan_json(str_c("depot_1cmt_linear/Data/Inits/inits_short_", 
+    write_stan_json(str_c("depot_1cmt_linear/Data/Inits_short/inits_short_", 
                           run, "_", chain, ".json"))
 }
 

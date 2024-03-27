@@ -72,56 +72,10 @@ stan_data <- list(n_subjects = n_subjects,
 
 write_stan_json(stan_data, file = "depot_1cmt_linear/Data/stan_data.json")
 
-system("mpiexec -n 2 ./depot_1cmt_prop_torsten_general sample num_warmup=300 num_samples=200 algorithm=hmc engine=nuts \
-       data file=../../Data/stan_data.json output file=torsten_general.csv \
-       init=../../Data/Inits/inits_1_1.json")
+## Now go to Terminal and go to 
+# /data/Random/within-chain-parallelization-paper/depot_1cmt_linear/Stan/Fit
+# and do:
+# ./fit_torsten_general.sh
 
-#################################
-
-mpi_cmd <- "/data/home/cadavis/mpich-install/bin/mpiexec"
-
-n_jobs <- 24
-run_number <- 1
-
-init_files <- str_c("depot_1cmt_linear/Data/Inits/inits_", run_number, "_",
-                    1:4, ".json")
-
-model <- cmdstan_model(
-  "depot_1cmt_linear/Stan/Fit/depot_1cmt_prop_torsten_general.stan",
-  cpp_options = list(STAN_MPI = TRUE, 
-                     CXX = "mpicxx", 
-                     TBB_CXX_TYPE = "gcc"))
-
-model <- cmdstan_model(
-  "depot_1cmt_linear/Stan/Fit/depot_1cmt_prop_torsten_general.stan",
-  cpp_options = list(STAN_MPI = TRUE, 
-                     CXX = "mpicxx", 
-                     TBB_CXX_TYPE = "gcc"))
-
-sample_and_save_torsten_general <- function(n_jobs, run_number){
-  
-  fit <- model$sample_mpi(data = stan_data,
-                          mpi_cmd = mpi_cmd,
-                          mpi_args = list("bind-to" = "core", 
-                                          "n" = n_jobs),
-                          seed = 112356,
-                          chains = 1,
-                          iter_warmup = 500,
-                          iter_sampling = 500,
-                          adapt_delta = 0.8,
-                          refresh = 50,
-                          max_treedepth = 10,
-                          output_dir = "depot_1cmt_linear/Stan/Fits",
-                          output_basename = str_c("torsten_general_test_", n_jobs),
-                          save_warmup = TRUE,
-                          init = init_files[1])
-  
-  fit$save_object(str_c("depot_1cmt_linear/Stan/Fits/torstengeneral_",
-                        n_jobs, "_jobs_run_", run_number, ".rds"))
-  
-}
-
-expand_grid(n_jobs = c(24, 8, 4),
-            run_number = 3) %>% 
-  pwalk(.f = sample_and_save_torsten_general)
-
+system("cd ~/Torsten/cmdstan && make /data/Random/within-chain-parallelization-paper/depot_1cmt_linear/Stan/Fit/depot_1cmt_prop_torsten_general")
+system("cd /data/Random/within-chain-parallelization-paper/depot_1cmt_linear/Stan/Fit && ./fit_torsten_general.sh")
