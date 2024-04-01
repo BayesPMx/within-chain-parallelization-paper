@@ -11,8 +11,11 @@
 
 *.exe 
 *.rds
+*.hpp
 README.html
 
 *_cache
 *_files
 
+depot_1cmt_linear/Stan/Fits/Torsten_General/
+!Fits/Torsten_General/.directory

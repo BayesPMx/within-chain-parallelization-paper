@@ -1,6 +1,6 @@
 #!/bin/bash
 
-njobs=(1 2 4 8 12 24 48)
+njobs=(48)
 runnumber=(1 2 3 4 5 6 7 8 9 10)
 chain=(1 2 3 4)
 

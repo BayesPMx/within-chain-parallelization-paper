@@ -70,8 +70,42 @@ stan_data <- list(n_subjects = n_subjects,
                   scale_sigma_p = 0.5,
                   prior_only = 0)
 
-write_stan_json(stan_data, file = "depot_1cmt_linear/Data/stan_data.json")
+sample_and_save_all <- function(grainsize, run_number){
+  
+  print(str_c("grainsize = ", grainsize, ", run #", run_number))
+  
+  init_files <- str_c("depot_1cmt_linear_grainsize/Data/Inits/inits_", 
+                      run_number, "_", 1, ".json")
+  
+  stan_data$grainsize <- grainsize
+  
+  model <- cmdstan_model(
+    "depot_1cmt_linear_grainsize/Stan/Fit/depot_1cmt_prop.stan",
+    cpp_options = list(stan_threads = TRUE))
+  
+  fit <- model$sample(data = stan_data,
+                      seed = 112356,
+                      chains = 1,
+                      parallel_chains = 1,
+                      threads_per_chain = 24,
+                      iter_warmup = 300,
+                      iter_sampling = 100,
+                      adapt_delta = 0.8,
+                      refresh = 100,
+                      max_treedepth = 10,
+                      init = init_files)
+  
+  solver_string <- case_when(solver == 1 ~ "analytical",
+                             solver == 2 ~ "matexp",
+                             solver == 3 ~ "rk45",
+                             TRUE ~ NA_character_)
+  
+  fit$save_object(str_c("depot_1cmt_linear_grainsize/Stan/Fits/grainsize_",
+                        grainsize, "run_", run_number, ".rds"))
+  
+}
 
-system("cd ~/Torsten/cmdstan && make /data/Random/within-chain-parallelization-paper/depot_1cmt_linear/Stan/Fit/depot_1cmt_prop_torsten_general")
-system("cd /data/Random/within-chain-parallelization-paper/depot_1cmt_linear/Stan/Fit && ./fit_torsten_general.sh")
-system("cd /data/Random/within-chain-parallelization-paper/depot_1cmt_linear/Stan/Fit && ./fit_torsten_general_mpi.sh")
+expand_grid(grainsize = c(100, 50, 25, 12, 6, 4, 3, 2, 1), 
+            run_number = 1:3) %>% 
+  pwalk(.f = sample_and_save_all)
+  

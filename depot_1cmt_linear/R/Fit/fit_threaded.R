@@ -125,7 +125,7 @@ sample_and_save_all <- function(threads_per_chain, solver, run_number){
   
 }
 
-expand_grid(threads_per_chain = c(0, 1, 2, 4, 8, 24), 
+expand_grid(threads_per_chain = c(0, 1, 2, 4, 8, 12, 24, 48), 
             solver = c(1, 2, 3),
             run_number = 1:10) %>% 
   pwalk(.f = sample_and_save_all)

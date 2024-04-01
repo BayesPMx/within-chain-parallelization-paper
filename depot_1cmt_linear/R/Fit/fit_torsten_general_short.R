@@ -8,6 +8,7 @@ set_cmdstan_path("~/Torsten/cmdstan")
 
 nonmem_data <- read_csv("depot_1cmt_linear/Data/depot_1cmt_prop.csv",
                         na = ".") %>% 
+  filter(ID <= 12) %>% 
   rename_all(tolower) %>% 
   rename(ID = "id",
          DV = "dv") %>% 
@@ -70,8 +71,7 @@ stan_data <- list(n_subjects = n_subjects,
                   scale_sigma_p = 0.5,
                   prior_only = 0)
 
-write_stan_json(stan_data, file = "depot_1cmt_linear/Data/stan_data.json")
+write_stan_json(stan_data, file = "depot_1cmt_linear/Data/stan_data_short.json")
 
 system("cd ~/Torsten/cmdstan && make /data/Random/within-chain-parallelization-paper/depot_1cmt_linear/Stan/Fit/depot_1cmt_prop_torsten_general")
-system("cd /data/Random/within-chain-parallelization-paper/depot_1cmt_linear/Stan/Fit && ./fit_torsten_general.sh")
-system("cd /data/Random/within-chain-parallelization-paper/depot_1cmt_linear/Stan/Fit && ./fit_torsten_general_mpi.sh")
+system("cd /data/Random/within-chain-parallelization-paper/depot_1cmt_linear/Stan/Fit && ./fit_torsten_general_short.sh")
