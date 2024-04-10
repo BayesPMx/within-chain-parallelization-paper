@@ -327,173 +327,173 @@ model{
                          bioav, tlag, n_cmt, solver);
   }
 }
-// generated quantities{
-//   
-//   real<lower = 0> sigma_sq_p = square(sigma_p);
-// 
-//   real<lower = 0> omega_cl = omega[1];
-//   real<lower = 0> omega_vc = omega[2];
-//   real<lower = 0> omega_ka = omega[3];
-// 
-//   real<lower = 0> omega_sq_cl = square(omega_cl);
-//   real<lower = 0> omega_sq_vc = square(omega_vc);
-//   real<lower = 0> omega_sq_ka = square(omega_ka);
-// 
-//   real cor_cl_vc;
-//   real cor_cl_ka;
-//   real cor_vc_ka;
-//   real omega_cl_vc;
-//   real omega_cl_ka;
-//   real omega_vc_ka;
-// 
-//   vector[n_obs] ipred;
-//   vector[n_obs] pred;
-//   vector[n_obs] dv_ppc;
-//   vector[n_obs] log_lik;
-//   vector[n_obs] res;
-//   vector[n_obs] wres;
-//   vector[n_obs] ires;
-//   vector[n_obs] iwres;
-//  
-//   {
-// 
-//     matrix[n_random, n_random] R = multiply_lower_tri_self_transpose(L);
-//     matrix[n_random, n_random] Omega = quad_form_diag(R, omega);
-// 
-//     vector[n_total] dv_pred;
-//     matrix[n_total, 2] x_pred;
-//     vector[n_total] dv_ipred;
-//     matrix[n_total, 2] x_ipred;
-// 
-//     cor_cl_vc = R[1, 2];
-//     cor_cl_ka = R[1, 3];
-//     cor_vc_ka = R[2, 3];
-// 
-//     omega_cl_vc = Omega[1, 2];
-//     omega_cl_ka = Omega[1, 3];
-//     omega_vc_ka = Omega[2, 3];
-// 
-//     for(j in 1:n_subjects){
-//       
-//       if(solver == 1){
-//         
-//         x_ipred[subj_start[j]:subj_end[j],] =
-//           pmx_solve_onecpt(time[subj_start[j]:subj_end[j]],
-//                            amt[subj_start[j]:subj_end[j]],
-//                            rate[subj_start[j]:subj_end[j]],
-//                            ii[subj_start[j]:subj_end[j]],
-//                            evid[subj_start[j]:subj_end[j]],
-//                            cmt[subj_start[j]:subj_end[j]],
-//                            addl[subj_start[j]:subj_end[j]],
-//                            ss[subj_start[j]:subj_end[j]],
-//                            {CL[j], VC[j], KA[j]})';
-//                            
-//         x_pred[subj_start[j]:subj_end[j],] =
-//           pmx_solve_onecpt(time[subj_start[j]:subj_end[j]],
-//                            amt[subj_start[j]:subj_end[j]],
-//                            rate[subj_start[j]:subj_end[j]],
-//                            ii[subj_start[j]:subj_end[j]],
-//                            evid[subj_start[j]:subj_end[j]],
-//                            cmt[subj_start[j]:subj_end[j]],
-//                            addl[subj_start[j]:subj_end[j]],
-//                            ss[subj_start[j]:subj_end[j]],
-//                            {TVCL, TVVC, TVKA})';
-//           
-//       }else if(solver == 2){
-//         
-//         matrix[n_cmt, n_cmt] K = rep_matrix(0, n_cmt, n_cmt);
-//         matrix[n_cmt, n_cmt] K_tv = rep_matrix(0, n_cmt, n_cmt);
-//         K[1, 1] = -KA[j];
-//         K[2, 1] = KA[j];
-//         K[2, 2] = -CL[j]/VC[j];
-//       
-//         x_ipred[subj_start[j]:subj_end[j], ] =
-//           pmx_solve_linode(time[subj_start[j]:subj_end[j]],
-//                            amt[subj_start[j]:subj_end[j]],
-//                            rate[subj_start[j]:subj_end[j]],
-//                            ii[subj_start[j]:subj_end[j]],
-//                            evid[subj_start[j]:subj_end[j]],
-//                            cmt[subj_start[j]:subj_end[j]],
-//                            addl[subj_start[j]:subj_end[j]],
-//                            ss[subj_start[j]:subj_end[j]],
-//                            K, bioav, tlag)';
-//                            
-//         K_tv[1, 1] = -TVKA;
-//         K_tv[2, 1] = TVKA;
-//         K_tv[2, 2] = -TVCL/TVVC;
-// 
-//         x_pred[subj_start[j]:subj_end[j],] =
-//           pmx_solve_linode(time[subj_start[j]:subj_end[j]],
-//                            amt[subj_start[j]:subj_end[j]],
-//                            rate[subj_start[j]:subj_end[j]],
-//                            ii[subj_start[j]:subj_end[j]],
-//                            evid[subj_start[j]:subj_end[j]],
-//                            cmt[subj_start[j]:subj_end[j]],
-//                            addl[subj_start[j]:subj_end[j]],
-//                            ss[subj_start[j]:subj_end[j]],
-//                            K_tv, bioav, tlag)';
-//                            
-//       }else{
-//         
-//         x_ipred[subj_start[j]:subj_end[j],] =
-//           pmx_solve_rk45(depot_1cmt_ode,
-//                          n_cmt,
-//                          time[subj_start[j]:subj_end[j]],
-//                          amt[subj_start[j]:subj_end[j]],
-//                          rate[subj_start[j]:subj_end[j]],
-//                          ii[subj_start[j]:subj_end[j]],
-//                          evid[subj_start[j]:subj_end[j]],
-//                          cmt[subj_start[j]:subj_end[j]],
-//                          addl[subj_start[j]:subj_end[j]],
-//                          ss[subj_start[j]:subj_end[j]],
-//                          {CL[j], VC[j], KA[j]}, bioav, tlag)';
-//                          
-//         x_pred[subj_start[j]:subj_end[j],] =
-//           pmx_solve_rk45(depot_1cmt_ode,
-//                          n_cmt,
-//                          time[subj_start[j]:subj_end[j]],
-//                          amt[subj_start[j]:subj_end[j]],
-//                          rate[subj_start[j]:subj_end[j]],
-//                          ii[subj_start[j]:subj_end[j]],
-//                          evid[subj_start[j]:subj_end[j]],
-//                          cmt[subj_start[j]:subj_end[j]],
-//                          addl[subj_start[j]:subj_end[j]],
-//                          ss[subj_start[j]:subj_end[j]],
-//                          {TVCL, TVVC, TVKA}, bioav, tlag)';
-//                            
-//       }
-//       
-//       dv_ipred[subj_start[j]:subj_end[j]] =
-//         x_ipred[subj_start[j]:subj_end[j], 2] ./ VC[j];
-//       
-//       dv_pred[subj_start[j]:subj_end[j]] =
-//         x_pred[subj_start[j]:subj_end[j], 2] ./ TVVC;
-//       
-//     }
-// 
-//     pred = dv_pred[i_obs];
-//     ipred = dv_ipred[i_obs];
-// 
-//   }
-// 
-//   res = dv_obs - pred;
-//   ires = dv_obs - ipred;
-// 
-//   for(i in 1:n_obs){
-//     real ipred_tmp = ipred[i];
-//     real sigma_tmp = ipred_tmp*sigma_p;
-//     dv_ppc[i] = normal_lb_rng(ipred_tmp, sigma_tmp, 0.0);
-//     if(bloq_obs[i] == 1){
-//       log_lik[i] = log_diff_exp(normal_lcdf(lloq_obs[i] | ipred_tmp, sigma_tmp),
-//                                 normal_lcdf(0.0 | ipred_tmp, sigma_tmp)) -
-//                    normal_lccdf(0.0 | ipred_tmp, sigma_tmp);
-//     }else{
-//       log_lik[i] = normal_lpdf(dv_obs[i] | ipred_tmp, sigma_tmp) -
-//                    normal_lccdf(0.0 | ipred_tmp, sigma_tmp);
-//     }
-//     wres[i] = res[i]/sigma_tmp;
-//     iwres[i] = ires[i]/sigma_tmp;
-//   }
-//   
-// }
+generated quantities{
+
+  // real<lower = 0> sigma_sq_p = square(sigma_p);
+  // 
+  // real<lower = 0> omega_cl = omega[1];
+  // real<lower = 0> omega_vc = omega[2];
+  // real<lower = 0> omega_ka = omega[3];
+  // 
+  // real<lower = 0> omega_sq_cl = square(omega_cl);
+  // real<lower = 0> omega_sq_vc = square(omega_vc);
+  // real<lower = 0> omega_sq_ka = square(omega_ka);
+  // 
+  // real cor_cl_vc;
+  // real cor_cl_ka;
+  // real cor_vc_ka;
+  // real omega_cl_vc;
+  // real omega_cl_ka;
+  // real omega_vc_ka;
+
+  vector[n_obs] ipred;
+  // vector[n_obs] pred;
+  // vector[n_obs] dv_ppc;
+  // vector[n_obs] log_lik;
+  // vector[n_obs] res;
+  // vector[n_obs] wres;
+  // vector[n_obs] ires;
+  // vector[n_obs] iwres;
+
+  {
+
+    // matrix[n_random, n_random] R = multiply_lower_tri_self_transpose(L);
+    // matrix[n_random, n_random] Omega = quad_form_diag(R, omega);
+    // 
+    // vector[n_total] dv_pred;
+    // matrix[n_total, 2] x_pred;
+    // vector[n_total] dv_ipred;
+    // matrix[n_total, 2] x_ipred;
+    // 
+    // cor_cl_vc = R[1, 2];
+    // cor_cl_ka = R[1, 3];
+    // cor_vc_ka = R[2, 3];
+    // 
+    // omega_cl_vc = Omega[1, 2];
+    // omega_cl_ka = Omega[1, 3];
+    // omega_vc_ka = Omega[2, 3];
+
+    for(j in 1:n_subjects){
+
+      if(solver == 1){
+
+        x_ipred[subj_start[j]:subj_end[j],] =
+          pmx_solve_onecpt(time[subj_start[j]:subj_end[j]],
+                           amt[subj_start[j]:subj_end[j]],
+                           rate[subj_start[j]:subj_end[j]],
+                           ii[subj_start[j]:subj_end[j]],
+                           evid[subj_start[j]:subj_end[j]],
+                           cmt[subj_start[j]:subj_end[j]],
+                           addl[subj_start[j]:subj_end[j]],
+                           ss[subj_start[j]:subj_end[j]],
+                           {CL[j], VC[j], KA[j]})';
+
+        // x_pred[subj_start[j]:subj_end[j],] =
+        //   pmx_solve_onecpt(time[subj_start[j]:subj_end[j]],
+        //                    amt[subj_start[j]:subj_end[j]],
+        //                    rate[subj_start[j]:subj_end[j]],
+        //                    ii[subj_start[j]:subj_end[j]],
+        //                    evid[subj_start[j]:subj_end[j]],
+        //                    cmt[subj_start[j]:subj_end[j]],
+        //                    addl[subj_start[j]:subj_end[j]],
+        //                    ss[subj_start[j]:subj_end[j]],
+        //                    {TVCL, TVVC, TVKA})';
+
+      }else if(solver == 2){
+
+        matrix[n_cmt, n_cmt] K = rep_matrix(0, n_cmt, n_cmt);
+        // matrix[n_cmt, n_cmt] K_tv = rep_matrix(0, n_cmt, n_cmt);
+        K[1, 1] = -KA[j];
+        K[2, 1] = KA[j];
+        K[2, 2] = -CL[j]/VC[j];
+
+        x_ipred[subj_start[j]:subj_end[j], ] =
+          pmx_solve_linode(time[subj_start[j]:subj_end[j]],
+                           amt[subj_start[j]:subj_end[j]],
+                           rate[subj_start[j]:subj_end[j]],
+                           ii[subj_start[j]:subj_end[j]],
+                           evid[subj_start[j]:subj_end[j]],
+                           cmt[subj_start[j]:subj_end[j]],
+                           addl[subj_start[j]:subj_end[j]],
+                           ss[subj_start[j]:subj_end[j]],
+                           K, bioav, tlag)';
+
+        // K_tv[1, 1] = -TVKA;
+        // K_tv[2, 1] = TVKA;
+        // K_tv[2, 2] = -TVCL/TVVC;
+        // 
+        // x_pred[subj_start[j]:subj_end[j],] =
+        //   pmx_solve_linode(time[subj_start[j]:subj_end[j]],
+        //                    amt[subj_start[j]:subj_end[j]],
+        //                    rate[subj_start[j]:subj_end[j]],
+        //                    ii[subj_start[j]:subj_end[j]],
+        //                    evid[subj_start[j]:subj_end[j]],
+        //                    cmt[subj_start[j]:subj_end[j]],
+        //                    addl[subj_start[j]:subj_end[j]],
+        //                    ss[subj_start[j]:subj_end[j]],
+        //                    K_tv, bioav, tlag)';
+
+      }else{
+
+        x_ipred[subj_start[j]:subj_end[j],] =
+          pmx_solve_rk45(depot_1cmt_ode,
+                         n_cmt,
+                         time[subj_start[j]:subj_end[j]],
+                         amt[subj_start[j]:subj_end[j]],
+                         rate[subj_start[j]:subj_end[j]],
+                         ii[subj_start[j]:subj_end[j]],
+                         evid[subj_start[j]:subj_end[j]],
+                         cmt[subj_start[j]:subj_end[j]],
+                         addl[subj_start[j]:subj_end[j]],
+                         ss[subj_start[j]:subj_end[j]],
+                         {CL[j], VC[j], KA[j]}, bioav, tlag)';
+
+        // x_pred[subj_start[j]:subj_end[j],] =
+        //   pmx_solve_rk45(depot_1cmt_ode,
+        //                  n_cmt,
+        //                  time[subj_start[j]:subj_end[j]],
+        //                  amt[subj_start[j]:subj_end[j]],
+        //                  rate[subj_start[j]:subj_end[j]],
+        //                  ii[subj_start[j]:subj_end[j]],
+        //                  evid[subj_start[j]:subj_end[j]],
+        //                  cmt[subj_start[j]:subj_end[j]],
+        //                  addl[subj_start[j]:subj_end[j]],
+        //                  ss[subj_start[j]:subj_end[j]],
+        //                  {TVCL, TVVC, TVKA}, bioav, tlag)';
+
+      }
+
+      dv_ipred[subj_start[j]:subj_end[j]] =
+        x_ipred[subj_start[j]:subj_end[j], 2] ./ VC[j];
+
+      // dv_pred[subj_start[j]:subj_end[j]] =
+      //   x_pred[subj_start[j]:subj_end[j], 2] ./ TVVC;
+
+    }
+
+    // pred = dv_pred[i_obs];
+    ipred = dv_ipred[i_obs];
+
+  }
+
+  // res = dv_obs - pred;
+  // ires = dv_obs - ipred;
+  // 
+  // for(i in 1:n_obs){
+  //   real ipred_tmp = ipred[i];
+  //   real sigma_tmp = ipred_tmp*sigma_p;
+  //   dv_ppc[i] = normal_lb_rng(ipred_tmp, sigma_tmp, 0.0);
+  //   if(bloq_obs[i] == 1){
+  //     log_lik[i] = log_diff_exp(normal_lcdf(lloq_obs[i] | ipred_tmp, sigma_tmp),
+  //                               normal_lcdf(0.0 | ipred_tmp, sigma_tmp)) -
+  //                  normal_lccdf(0.0 | ipred_tmp, sigma_tmp);
+  //   }else{
+  //     log_lik[i] = normal_lpdf(dv_obs[i] | ipred_tmp, sigma_tmp) -
+  //                  normal_lccdf(0.0 | ipred_tmp, sigma_tmp);
+  //   }
+  //   wres[i] = res[i]/sigma_tmp;
+  //   iwres[i] = ires[i]/sigma_tmp;
+  // }
+
+}
 

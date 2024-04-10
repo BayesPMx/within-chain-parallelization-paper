@@ -4,7 +4,7 @@ cat("\014")
 library(tidyjson)
 library(tidyverse)
 
-n_subjects <- read_csv("depot_1cmt_linear/Data/depot_1cmt_prop.csv",
+n_subjects <- read_csv("depot_1cmt_linear_grainsize/Data/depot_1cmt_prop.csv",
                        na = ".") %>% 
   distinct(ID) %>%
   count() %>%
@@ -19,9 +19,9 @@ write_inits <- function(run, chain){
        L = diag(3),
        Z = matrix(rnorm(n_subjects*3), ncol = n_subjects, nrow = 3)) %>% 
     map(round, 3) %>% 
-    write_stan_json(str_c("depot_1cmt_linear/Data/Inits/inits_", 
+    write_stan_json(str_c("depot_1cmt_linear_grainsize/Data/Inits/inits_", 
                           run, "_", chain, ".json"))
 }
 
-expand_grid(run = 1:10, chain = 1:4) %>% 
+expand_grid(run = 1, chain = 1) %>% 
   {map2(.$run, .$chain, write_inits)}

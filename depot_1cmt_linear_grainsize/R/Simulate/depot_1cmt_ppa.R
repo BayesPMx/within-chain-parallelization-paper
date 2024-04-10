@@ -27,7 +27,7 @@ cor_p_a <- 0
 
 n_subjects_per_dose <- 600
 
-dosing_data <- expand.ev(ID = 1:n_subjects_per_dose, addl = 6, ii = 24, 
+dosing_data <- expand.ev(ID = 1:n_subjects_per_dose, addl = 0, ii = 24, 
                          cmt = 1, amt = c(50, 100, 200, 400), ss = 0, tinf = 0, 
                          evid = 1) %>%
   as_tibble() %>% 
@@ -35,10 +35,10 @@ dosing_data <- expand.ev(ID = 1:n_subjects_per_dose, addl = 6, ii = 24,
   select(ID, TIME, everything()) 
 
 
-dense_grid <- seq(0, 24*7, by = 0.5)
+dense_grid <- seq(0, 24, by = 0.5)
 
 sampling_times <- c(0.25, 0.5, 1, 2, 4, 8, 12, 24)
-realistic_times <- c(sampling_times, 72, 144, 144 + sampling_times)
+realistic_times <- sampling_times
 
 # times_to_simulate <- dense_grid
 times_to_simulate <- realistic_times
@@ -109,10 +109,7 @@ simulated_data <- model$sample(data = stan_data,
                                parallel_chains = 1)
 
 params_ind <- simulated_data$draws(c("CL", "VC", "KA")) %>% 
-  spread_draws(c(CL, VC, KA)[i]) %>% 
-  inner_join(dosing_data %>% 
-               mutate(i = 1:n()),
-             by = "i") %>% 
+  spread_draws(c(CL, VC, KA)[ID]) %>% 
   ungroup() %>%
   select(ID, CL, VC, KA)
 
@@ -145,8 +142,8 @@ data <- simulated_data$draws(c("dv", "ipred")) %>%
     scale_y_continuous(name = latex2exp::TeX("Drug Conc. $(\\mu g/mL)$"),
                        trans = "log10") + 
     scale_x_continuous(name = "Time (h)",
-                       breaks = seq(0, max(data$TIME), by = 24),
-                       labels = seq(0, max(data$TIME), by = 24),
+                       breaks = seq(0, max(data$TIME), by = 4),
+                       labels = seq(0, max(data$TIME), by = 4),
                        limits = c(0, max(data$TIME))))
 p_1 +
   facet_trelliscope(~ID, nrow = 2, ncol = 2)

@@ -6,7 +6,7 @@ library(tidyverse)
 
 set_cmdstan_path("~/Torsten/cmdstan")
 
-nonmem_data <- read_csv("depot_1cmt_linear/Data/depot_1cmt_prop.csv",
+nonmem_data <- read_csv("depot_1cmt_linear_grainsize/Data/depot_1cmt_prop.csv",
                         na = ".") %>% 
   rename_all(tolower) %>% 
   rename(ID = "id",
@@ -87,7 +87,7 @@ sample_and_save_all <- function(grainsize, run_number){
                       seed = 112356,
                       chains = 1,
                       parallel_chains = 1,
-                      threads_per_chain = 24,
+                      threads_per_chain = 16,
                       iter_warmup = 300,
                       iter_sampling = 100,
                       adapt_delta = 0.8,
@@ -95,17 +95,16 @@ sample_and_save_all <- function(grainsize, run_number){
                       max_treedepth = 10,
                       init = init_files)
   
-  solver_string <- case_when(solver == 1 ~ "analytical",
-                             solver == 2 ~ "matexp",
-                             solver == 3 ~ "rk45",
-                             TRUE ~ NA_character_)
-  
   fit$save_object(str_c("depot_1cmt_linear_grainsize/Stan/Fits/grainsize_",
-                        grainsize, "run_", run_number, ".rds"))
+                        grainsize, "_run_", run_number, ".rds"))
   
 }
 
-expand_grid(grainsize = c(100, 50, 25, 12, 6, 4, 3, 2, 1), 
-            run_number = 1:3) %>% 
+expand_grid(grainsize = c(300, 150, 75, 38, 19, 10, 5, 2, 1), 
+            run_number = 1) %>% 
   pwalk(.f = sample_and_save_all)
   
+
+expand_grid(grainsize = c(1, 300, 2), 
+            run_number = 1) %>% 
+  pwalk(.f = sample_and_save_all)
