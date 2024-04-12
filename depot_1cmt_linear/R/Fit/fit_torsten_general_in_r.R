@@ -12,6 +12,8 @@ library(future)
 library(future.batchtools)
 library(here)
 
+set_cmdstan_path("/data/home/cadavis/Documents/v0.91.0/cmdstan")
+
 nonmem_data <- read_csv("depot_1cmt_linear/Data/depot_1cmt_prop.csv",
                         na = ".") %>% 
   rename_all(tolower) %>% 
@@ -76,23 +78,11 @@ stan_data <- list(n_subjects = n_subjects,
                   scale_sigma_p = 0.5,
                   prior_only = 0)
 
-## The approach used for parallel computation on a grid in this example 
-## requires at least one active compute node. If no compute node is
-## running then wake up a compute node using the qtouch function.
-## Wait for the compute node to come up before running the furrr::future_pmap
-## step in the script.
-qtouch <- function(name = 'touch'){
-  system(sprintf('echo "sleep 5" | qsub -N %s',name),intern = TRUE) 
-}
-qtouch()
-
-set_cmdstan_path("~/Torsten/cmdstan")
-mpi_cmd <- "/data/home/cadavis/mpich-install/bin/mpiexec"
-
+mpi_cmd <- "/usr/bin/mpiexec" ## Default for Metworx
 
 ## number of cores per chain
-## Each Metworx compute node should have a number of vCPUs >= (2 * nJobs)
-n_jobs <- 16
+## Each Metworx compute node should have a number of vCPUs >= (2 * n_jobs)
+n_jobs <- 48
 
 n_chains <- 4
 
@@ -137,15 +127,16 @@ sample_and_save_all_mpi <- function(chain,
                           iter_warmup = iter_warmup,
                           iter_sampling = iter_sampling,
                           init = init_files,
-                          output_basename = output_basename,
                           output_dir = output_dir, 
                           max_treedepth = max_treedepth,
                           adapt_delta = adapt_delta,
                           refresh = refresh,
                           save_warmup = save_warmup)
   
-  fit$save_object(str_c("depot_1cmt_linear/Stan/Fits/torsten_general_",
-                        n_jobs, "_jobs_run_", run_number, ".rds"))
+  fit$save_output_files(dir = output_dir, 
+                        basename = str_c(output_basename, "_", chain))
+  # fit$save_object(str_c("depot_1cmt_linear/Stan/Fits/torsten_general_",
+  #                       n_jobs, "_jobs_run_", run_number, ".rds"))
   
 }
 
@@ -158,16 +149,26 @@ model <- cmdstan_model(
 RNGkind("L'Ecuyer-CMRG")
 mc.reset.stream()
 
-furrr::future_pwalk(list(chain = 1:n_chains), 
+## The approach used for parallel computation on a grid in this example 
+## requires at least one active compute node. If no compute node is
+## running then wake up a compute node using the qtouch function.
+## Wait for the compute node to come up before running the furrr::future_pmap
+## step in the script.
+qtouch <- function(name = 'touch'){
+  system(sprintf('echo "sleep 5" | qsub -N %s', name), intern = TRUE) 
+}
+qtouch()
+
+furrr::future_pwalk(list(chain = 1:n_chains,
+                         seed = c(1, 10, 100, 1000)), 
                     .f = sample_and_save_all_mpi,
                     run_number = 1,
                     n_jobs = n_jobs,
                     stan_data = stan_data,
-                    seed = 112356,
                     model = model,
                     iter_warmup = 300,
                     iter_sampling = 200,
-                    output_dir = "depot_1cmt_linear/Stan/Fits_mpi_test/",
+                    output_dir = "depot_1cmt_linear/Stan/Fits/MPI_Test/",
                     output_basename = str_c("torsten_general_",
                                             n_jobs, "_jobs_run_", 1),
                     max_treedepth = 10,

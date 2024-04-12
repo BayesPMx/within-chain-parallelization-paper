@@ -142,9 +142,21 @@ zoom %>%
   slice(-c(1, n())) %>% 
   summarize(mean_time = mean(time), min_time = min(time), 
             max_time = max(time)) %>% 
-  mutate(across(ends_with("time"), ~ ./.[1])) %>% View
+  ungroup() %>%
+  bind_rows({
+    data_1 <- .
+    data_1 %>% 
+      filter(solver == "rk45", threads_per_chain == 0) %>% 
+      mutate(solver = factor("torsten_general"))
+  }) %>% 
+  group_by(solver) %>% 
+  arrange(threads_per_chain, .by_group = TRUE) %>% 
+  mutate(across(ends_with("time"), ~ ./.[1]),
+         speedup_mean = 1/mean_time,
+         speedup_min = 1/min_time,
+         speedup_max = 1/max_time)
 
-zoom %>% 
+p_time_vs_processes <- zoom %>% 
   group_by(solver, threads_per_chain, run_number) %>% 
   distinct(time) %>% 
   ungroup(run_number) %>%
@@ -186,9 +198,73 @@ zoom %>%
   annotation_logticks(sides = "l") +
   scale_x_discrete(name = "Processes per Chain") +
   theme(axis.text = element_text(size = 14),
-        axis.title = element_text(size = 15))
+        axis.title = element_text(size = 15),
+        legend.position = "bottom")
                
-  
+
+p_speedup_vs_processes <- zoom %>% 
+  group_by(solver, threads_per_chain, run_number) %>% 
+  distinct(time) %>% 
+  ungroup(run_number) %>%
+  arrange(time, .by_group = TRUE) %>% 
+  slice(-c(1, n())) %>% 
+  summarize(mean_time = mean(time), min_time = min(time), 
+            max_time = max(time)) %>% 
+  ungroup() %>%
+  bind_rows({
+    data_1 <- .
+    data_1 %>% 
+      filter(solver == "rk45", threads_per_chain == 0) %>% 
+      mutate(solver = factor("torsten_general"))
+  }) %>% 
+  group_by(solver) %>% 
+  arrange(threads_per_chain, .by_group = TRUE) %>% 
+  mutate(across(ends_with("time"), ~ ./.[1]),
+         speedup_mean = 1/mean_time,
+         speedup_min = 1/min_time,
+         speedup_max = 1/max_time) %>% 
+  ungroup() %>% 
+  mutate(type = if_else(solver %in% c("rk45", "torsten_general"), "ode", 
+                        solver) %>% 
+           factor(),
+         processes = if_else(threads_per_chain == 0, "Not Parallel", 
+                             as.character(threads_per_chain)) %>% 
+           factor(levels = c("Not Parallel", as.character(unique(threads_per_chain)))),
+         across(ends_with("time"), ~./60),
+         solver = case_when(solver == "analytical" ~ "Analytical Threaded",
+                            solver == "matexp" ~ "Linear ODE Threaded",
+                            solver == "rk45" ~ "General ODE Threaded",
+                            solver == "torsten_general" ~ 
+                              "Torsten Group ODE MPI",
+                            TRUE ~ NA_character_) %>% 
+           factor(levels = c("Analytical Threaded",
+                             "Linear ODE Threaded",
+                             "General ODE Threaded",
+                             "Torsten Group ODE MPI"))) %>% 
+  ggplot(aes(x = processes, y = speedup_mean, group = solver, color = solver)) +
+  geom_point() +
+  geom_line() +
+  geom_errorbar(aes(ymin = speedup_min, ymax = speedup_max), width = 0.2) +
+  theme_bw() + 
+  scale_color_manual(name = "Solver",
+                     values = c("Analytical Threaded" = "blue",
+                                "Linear ODE Threaded" = "red",
+                                "General ODE Threaded" = "orange",
+                                "Torsten Group ODE MPI" = "magenta")) +
+  scale_y_continuous(name = "Speedup",
+                     trans = "identity",
+                     breaks = seq(1, 9, by = 2),
+                     labels = seq(1, 9, by = 2)) +
+  scale_x_discrete(name = "Processes per Chain") +
+  theme(axis.text = element_text(size = 14),
+        axis.title = element_text(size = 15),
+        legend.position = "bottom")
+
+p_time_vs_processes /
+  p_speedup_vs_processes +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
 ## Do the grainsize stuff
 
 read_quick_grainsize <- function(solver, threads_per_chain, grainsize){
@@ -246,7 +322,8 @@ summary_of_not_parallel_threaded <- zoom %>%
            factor(levels = c("Analytical Threaded",
                              "Linear ODE Threaded",
                              "General ODE Threaded",
-                             "Torsten Group ODE MPI"))) %>% 
+                             "Torsten Group ODE MPI")),
+         time = time/60) %>% 
   ungroup() %>% 
   filter(parallel == "Not Parallel") %>% 
   group_by(solver, threads_per_chain, parallel, run_number) %>% 
@@ -286,15 +363,33 @@ quick_grainsize %>%
   annotation_logticks(sides = "l") +
   scale_x_discrete(name = "Grainsize") +
   theme(axis.text = element_text(size = 14),
-        axis.title = element_text(size = 15)) +
+        axis.title = element_text(size = 15),
+        legend.position = "bottom") +
   geom_hline(data = summary_of_not_parallel_threaded,
              mapping = aes(yintercept = mean_time, color = solver),
              linetype = "dashed") +
-  facet_wrap(~processes, 
+  facet_wrap(~ processes, 
              labeller = as_labeller(function(x) str_c("Processes per Chain: ", 
                                                       x)))
 
-
+quick_grainsize %>% 
+  distinct(solver, grainsize, threads_per_chain, time) %>% 
+  mutate(solver = case_when(solver == "analytical" ~ "Analytical Threaded",
+                            solver == "matexp" ~ "Linear ODE Threaded",
+                            solver == "rk45" ~ "General ODE Threaded",
+                            solver == "torsten_general" ~ 
+                              "Torsten Group ODE MPI",
+                            TRUE ~ NA_character_) %>% 
+           factor(levels = c("Analytical Threaded",
+                             "Linear ODE Threaded",
+                             "General ODE Threaded",
+                             "Torsten Group ODE MPI")),
+         processes = factor(threads_per_chain),
+         grainsize = factor(grainsize),
+         time = time/60) %>% 
+  group_by(solver, threads_per_chain) %>% 
+  filter(grainsize == 1 | time == min(time)) %>% 
+  mutate(speedup = time[1]/time)
 
 
 
