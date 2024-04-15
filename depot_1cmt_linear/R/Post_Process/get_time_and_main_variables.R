@@ -68,18 +68,18 @@ get_time_and_main_variables <- function(threads_per_chain, solver, run_number){
   
 }
 
-plan(multisession, workers = parallel::detectCores())
-
-zoom <- expand_grid(threads_per_chain = c(0, 1, 2, 4, 8, 12, 24, 48), 
-                    solver = c(1:4), # c(1:5) if I get the cluster going
-                    run_number = 1:10) %>%
-  filter(!(threads_per_chain == 0 & solver %in% c(4, 5))) %>% 
-  future_pmap_dfr(.f = get_time_and_main_variables)
-
-plan(sequential)
-
-zoom %>% 
-  write_rds("depot_1cmt_linear/Results/time_and_main_variables.rds")
+# plan(multisession, workers = parallel::detectCores())
+# 
+# zoom <- expand_grid(threads_per_chain = c(0, 1, 2, 4, 8, 12, 24, 48), 
+#                     solver = c(1:4), 
+#                     run_number = 1:10) %>%
+#   filter(!(threads_per_chain == 0 & solver %in% c(4, 5))) %>% 
+#   future_pmap_dfr(.f = get_time_and_main_variables)
+# 
+# plan(sequential)
+# 
+# zoom %>% 
+#   write_rds("depot_1cmt_linear/Results/time_and_main_variables.rds")
 
 zoom <- read_rds("depot_1cmt_linear/Results/time_and_main_variables.rds")
 

@@ -162,18 +162,3 @@ expand_grid(solver = c(1, 2),
   pwalk(.f = sample_and_save_all)
 
 
-# expand_grid(solver = c(1),
-#             grainsize = c(4), 
-#             run_number = 1:10) %>% 
-#   bind_rows(expand_grid(solver = c(2),
-#                         grainsize = c(4, 8, 10), 
-#                         run_number = 1:10)) %>% 
-#   bind_rows(expand_grid(solver = c(3),
-#                         grainsize = c(1, 2, 4), 
-#                         run_number = 1:10)) %>% 
-#   pwalk(.f = sample_and_save_all)
-
-expand_grid(solver = c(3),
-                        grainsize = c(4), 
-                        run_number = 1:10) %>% 
-  pwalk(.f = sample_and_save_all)

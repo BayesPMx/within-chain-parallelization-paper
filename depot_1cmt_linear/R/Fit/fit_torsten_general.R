@@ -74,4 +74,3 @@ write_stan_json(stan_data, file = "depot_1cmt_linear/Data/stan_data.json")
 
 system("cd ~/Torsten/cmdstan && make /data/Random/within-chain-parallelization-paper/depot_1cmt_linear/Stan/Fit/depot_1cmt_prop_torsten_general")
 system("cd /data/Random/within-chain-parallelization-paper/depot_1cmt_linear/Stan/Fit && ./fit_torsten_general.sh")
-# system("cd /data/Random/within-chain-parallelization-paper/depot_1cmt_linear/Stan/Fit && ./fit_torsten_general_mpi.sh")

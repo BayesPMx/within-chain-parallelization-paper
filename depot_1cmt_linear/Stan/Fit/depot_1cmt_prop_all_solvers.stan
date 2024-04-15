@@ -362,8 +362,8 @@ generated quantities{
     // 
     // vector[n_total] dv_pred;
     // matrix[n_total, 2] x_pred;
-    // vector[n_total] dv_ipred;
-    // matrix[n_total, 2] x_ipred;
+    vector[n_total] dv_ipred;
+    matrix[n_total, 2] x_ipred;
     // 
     // cor_cl_vc = R[1, 2];
     // cor_cl_ka = R[1, 3];
