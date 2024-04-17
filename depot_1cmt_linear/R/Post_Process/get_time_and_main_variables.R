@@ -230,7 +230,6 @@ p_speedup_vs_processes <- zoom %>%
          processes = if_else(threads_per_chain == 0, "Not Parallel", 
                              as.character(threads_per_chain)) %>% 
            factor(levels = c("Not Parallel", as.character(unique(threads_per_chain)))),
-         across(ends_with("time"), ~./60),
          solver = case_when(solver == "analytical" ~ "Analytical Threaded",
                             solver == "matexp" ~ "Linear ODE Threaded",
                             solver == "rk45" ~ "General ODE Threaded",
@@ -372,9 +371,12 @@ quick_grainsize %>%
              labeller = as_labeller(function(x) str_c("Processes per Chain: ", 
                                                       x)))
 
-quick_grainsize %>% 
-  distinct(solver, grainsize, threads_per_chain, time) %>% 
-  mutate(solver = case_when(solver == "analytical" ~ "Analytical Threaded",
+blah <- zoom %>% 
+  as_tibble() %>% 
+  mutate(parallel = threads_per_chain > 0,
+         parallel = if_else(parallel, "Parallel", "Not Parallel") %>% 
+           factor(levels = c("Not Parallel", "Parallel")),
+         solver = case_when(solver == "analytical" ~ "Analytical Threaded",
                             solver == "matexp" ~ "Linear ODE Threaded",
                             solver == "rk45" ~ "General ODE Threaded",
                             solver == "torsten_general" ~ 
@@ -384,19 +386,85 @@ quick_grainsize %>%
                              "Linear ODE Threaded",
                              "General ODE Threaded",
                              "Torsten Group ODE MPI")),
-         processes = factor(threads_per_chain),
-         grainsize = factor(grainsize),
          time = time/60) %>% 
+  ungroup() %>% 
+  group_by(solver, threads_per_chain, parallel, run_number) %>% 
+  distinct(time) %>% 
+  ungroup(run_number) %>%
+  arrange(time, .by_group = TRUE) %>% 
+  slice(-c(1, n())) %>% 
+  summarize(mean_time = mean(time), min_time = min(time), 
+            max_time = max(time)) %>% 
+  filter(str_detect(solver, "Threaded")) %>% 
+  mutate(grainsize = if_else(parallel == "Parallel", 1, 0)) %>% 
+  select(solver, threads_per_chain, parallel, grainsize, time = mean_time) %>% 
+  filter(threads_per_chain %in% c(0, 4, 24)) %>% 
+  bind_rows(quick_grainsize %>% 
+              distinct(solver, grainsize, threads_per_chain, time) %>% 
+              mutate(solver = case_when(solver == "analytical" ~ "Analytical Threaded",
+                                        solver == "matexp" ~ "Linear ODE Threaded",
+                                        solver == "rk45" ~ "General ODE Threaded",
+                                        solver == "torsten_general" ~ 
+                                          "Torsten Group ODE MPI",
+                                        TRUE ~ NA_character_) %>% 
+                       factor(levels = c("Analytical Threaded",
+                                         "Linear ODE Threaded",
+                                         "General ODE Threaded",
+                                         "Torsten Group ODE MPI")),
+                     parallel = "Parallel",
+                     time = time/60) %>% 
+              group_by(solver, threads_per_chain) %>% 
+              filter(time == min(time)) %>% 
+              ungroup()) %>% 
+  arrange(solver, threads_per_chain, grainsize)
+
+
+
+
+t_1 <- blah %>% 
+  group_by(solver) %>% 
+  mutate(baseline_no_parallel = time[parallel == "Not Parallel"]) %>% 
   group_by(solver, threads_per_chain) %>% 
-  filter(grainsize == 1 | time == min(time)) %>% 
-  mutate(speedup = time[1]/time)
+  mutate(baseline_grainsize_1 = case_when(all(grainsize == 0) ~ NA_real_,
+                                          TRUE ~ time[1])) %>% 
+  summarize(grainsize_1_vs_no_parallel = baseline_no_parallel/baseline_grainsize_1) %>% 
+  ungroup() %>% 
+  distinct() %>% 
+  drop_na() %>% 
+  pivot_wider(names_from = threads_per_chain, 
+              values_from = grainsize_1_vs_no_parallel)
+
+t_2 <- blah %>% 
+  group_by(solver, threads_per_chain) %>% 
+  mutate(baseline_grainsize_1 = case_when(all(grainsize == 0) ~ NA_real_,
+                                          TRUE ~ time[1]),
+         optimum_grainsize = case_when(all(grainsize == 0) ~ NA_real_,
+                                       TRUE ~ time[2])) %>% 
+  summarize(optimum_grainsize_vs_grainsize_1 = baseline_grainsize_1/optimum_grainsize) %>% 
+  ungroup() %>% 
+  distinct() %>% 
+  drop_na() %>% 
+  pivot_wider(names_from = threads_per_chain, 
+              values_from = optimum_grainsize_vs_grainsize_1)  
+
+
+t_3 <- blah %>% 
+  group_by(solver) %>% 
+  mutate(baseline_no_parallel = time[parallel == "Not Parallel"]) %>% 
+  group_by(solver, threads_per_chain) %>% 
+  mutate(optimum_grainsize = case_when(all(grainsize == 0) ~ NA_real_,
+                                       TRUE ~ time[2])) %>% 
+  summarize(optimum_grainsize_vs_no_parallel = 
+              baseline_no_parallel/optimum_grainsize) %>% 
+  ungroup() %>% 
+  distinct() %>% 
+  drop_na() %>% 
+  pivot_wider(names_from = threads_per_chain, 
+              values_from = optimum_grainsize_vs_no_parallel)
+
+t_1
+t_2
+t_3
 
 
 
-
-# zoom %>% 
-#   group_by(solver, threads_per_chain, run_number, .chain) %>% 
-#   mutate(.chain = cur_group_id()) %>% 
-#   ungroup() %>% 
-#   select(-solver, -run_number, -threads_per_chain, -time) %>% 
-#   summarize_draws()
