@@ -19,6 +19,11 @@ README.html
 
 depot_1cmt_linear/Stan/Fits/Torsten_General/
 !Fits/Torsten_General/.directory
+<<<<<<< HEAD
 
 */Stan/Fits/Output/*.csv
 */*/Stan/Fits/Output/*.csv
+=======
+depot_1cmt_linear/Stan/Fits/MPI/
+!Fits/MPI/.directory
+>>>>>>> 87db3b77a186c33f2cc7be5347b721b9c7bedd3d

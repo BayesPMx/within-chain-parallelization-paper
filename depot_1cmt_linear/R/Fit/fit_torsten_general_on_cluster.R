@@ -12,7 +12,17 @@ library(future)
 library(future.batchtools)
 library(here)
 
-set_cmdstan_path("/data/home/cadavis/Documents/v0.91.0/cmdstan")
+set_cmdstan_path("/data/Random/mpi_example1/Torsten/v0.91.0/cmdstan/")
+mpi_cmd <- "/usr/bin/mpiexec" ## Default for Metworx
+
+## The approach used for parallel computation on a grid in this example 
+## requires at least one active compute node. If no compute node is
+## running then wake up a compute node using the qtouch function.
+## Wait for the compute node to come up before running the furrr::future_pmap
+## step in the script.
+qtouch <- function(name = 'touch'){
+  system(sprintf('echo "sleep 5" | qsub -N %s', name), intern = TRUE) 
+}
 
 nonmem_data <- read_csv("depot_1cmt_linear/Data/depot_1cmt_prop.csv",
                         na = ".") %>% 
@@ -78,32 +88,23 @@ stan_data <- list(n_subjects = n_subjects,
                   scale_sigma_p = 0.5,
                   prior_only = 0)
 
-mpi_cmd <- "/usr/bin/mpiexec" ## Default for Metworx
+model <- cmdstan_model(
+  "depot_1cmt_linear/Stan/Fit/depot_1cmt_prop_torsten_general.stan")
 
 ## number of cores per chain
 ## Each Metworx compute node should have a number of vCPUs >= (2 * n_jobs)
-n_jobs <- 48
-
 n_chains <- 4
+
+RNGkind("L'Ecuyer-CMRG")
+mc.reset.stream()
 
 model_name <- "depot_1cmt_linear_torsten_general"
 
-## Setup use of future with Grid Engine
-sge <- future::tweak(
-  future.batchtools::batchtools_sge,
-  label = model_name,
-  template = "batchtools.sge-mrg.tmpl",
-  workers = n_chains, # This is really the number of "jobs" that we want to create; no clear relationship to number of worker nodes
-  resources = list(slots = 2 * n_jobs) # this is the number of cores that each job will require
-)
-
-future::plan(sge)
-
 sample_and_save_all_mpi <- function(chain,
+                                    seed = 112356,
                                     run_number,
                                     n_jobs,
                                     stan_data,
-                                    seed = 112356, 
                                     model,
                                     iter_warmup = 500,
                                     iter_sampling = 1000,
@@ -114,12 +115,25 @@ sample_and_save_all_mpi <- function(chain,
                                     refresh = 100,
                                     save_warmup = FALSE){
   
+  set_cmdstan_path("/data/Random/mpi_example1/Torsten/v0.91.0/cmdstan/")
+  
+  ## Setup use of future with Grid Engine
+  sge <- future::tweak(
+    future.batchtools::batchtools_sge,
+    label = model_name,
+    template = "/data/Random/mpi_example1/batchtools.sge-mrg.tmpl",
+    workers = n_chains, # This is really the number of "jobs" that we want to create; no clear relationship to number of worker nodes
+    resources = list(slots = 2 * n_jobs) # this is the number of cores that each job will require
+  )
+  
+  future::plan(sge)
+  
   init_files <- str_c("depot_1cmt_linear/Data/Inits/inits_", run_number, "_",
-                      1:4, ".json")
+                      chain, ".json")
   
   fit <- model$sample_mpi(data = stan_data,
                           mpi_cmd = mpi_cmd,
-                          mpi_args = list("bind-to" = "core", 
+                          mpi_args = list("bind-to" = "core",
                                           "n" = n_jobs),
                           seed = seed,
                           chains = 1,
@@ -134,46 +148,43 @@ sample_and_save_all_mpi <- function(chain,
                           save_warmup = save_warmup)
   
   fit$save_output_files(dir = output_dir, 
-                        basename = str_c(output_basename, "_", chain))
-  # fit$save_object(str_c("depot_1cmt_linear/Stan/Fits/torsten_general_",
-  #                       n_jobs, "_jobs_run_", run_number, ".rds"))
+                        basename = str_c(output_basename, run_number, "_", 
+                                         chain),
+                        timestamp = FALSE, random = FALSE)
   
 }
 
-# model <- cmdstan_model(
-#   "depot_1cmt_linear/Stan/Fit/depot_1cmt_prop_torsten_general.stan",
-#   cpp_options = list(stan_mpi = TRUE))
-model <- cmdstan_model(
-  "depot_1cmt_linear/Stan/Fit/depot_1cmt_prop_torsten_general.stan")
+# qtouch()
 
-RNGkind("L'Ecuyer-CMRG")
-mc.reset.stream()
-
-## The approach used for parallel computation on a grid in this example 
-## requires at least one active compute node. If no compute node is
-## running then wake up a compute node using the qtouch function.
-## Wait for the compute node to come up before running the furrr::future_pmap
-## step in the script.
-qtouch <- function(name = 'touch'){
-  system(sprintf('echo "sleep 5" | qsub -N %s', name), intern = TRUE) 
+go_through_them_all <- function(n_jobs, run_number){
+  
+  furrr::future_pwalk(list(chain = 1:n_chains,
+                           seed = 10^c(0:3)), 
+                      .f = sample_and_save_all_mpi,
+                      run_number = run_number,
+                      n_jobs = n_jobs,
+                      stan_data = stan_data,
+                      model = model,
+                      iter_warmup = 500,
+                      iter_sampling = 1000,
+                      output_dir = "depot_1cmt_linear/Stan/Fits/MPI/",
+                      output_basename = str_c("torsten_general_",
+                                              n_jobs, "_jobs_run_"),
+                      max_treedepth = 10,
+                      adapt_delta = 0.80,
+                      refresh = 100,
+                      save_warmup = FALSE,
+                      .options = furrr_options(seed = TRUE))
+  
+  fit <- as_cmdstan_fit(
+    str_c("depot_1cmt_linear/Stan/Fits/MPI/torsten_general_", n_jobs, 
+          "_jobs_run_", run_number, "_", 1:4, "-1.csv"))
+  
+  fit$save_object(
+    str_c("depot_1cmt_linear/Stan/Fits/MPI/torsten_general_", n_jobs, 
+          "_jobs_run_", run_number, ".rds"))
 }
-qtouch()
 
-furrr::future_pwalk(list(chain = 1:n_chains,
-                         seed = c(1, 10, 100, 1000)), 
-                    .f = sample_and_save_all_mpi,
-                    run_number = 1,
-                    n_jobs = n_jobs,
-                    stan_data = stan_data,
-                    model = model,
-                    iter_warmup = 300,
-                    iter_sampling = 200,
-                    output_dir = "depot_1cmt_linear/Stan/Fits/MPI_Test/",
-                    output_basename = str_c("torsten_general_",
-                                            n_jobs, "_jobs_run_", 1),
-                    max_treedepth = 10,
-                    adapt_delta = 0.80,
-                    refresh = 100,
-                    save_warmup = TRUE,
-                    .options = furrr_options(seed = TRUE))
-
+expand_grid(n_jobs = c(1, 2, 4, 8, 12, 24, 48),
+            run_number = 1:10) %>%
+  pwalk(.f = go_through_them_all)
