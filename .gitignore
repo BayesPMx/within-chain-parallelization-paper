@@ -19,3 +19,6 @@ README.html
 
 depot_1cmt_linear/Stan/Fits/Torsten_General/
 !Fits/Torsten_General/.directory
+
+*/Stan/Fits/Output/*.csv
+*/*/Stan/Fits/Output/*.csv
