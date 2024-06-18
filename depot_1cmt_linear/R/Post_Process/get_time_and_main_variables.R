@@ -81,9 +81,10 @@ get_time_and_main_variables <- function(threads_per_chain, solver, run_number){
 # zoom %>% 
 #   write_rds("depot_1cmt_linear/Results/time_and_main_variables.rds")
 
+
 zoom <- read_rds("depot_1cmt_linear/Results/time_and_main_variables.rds")
 
-p_1 <- zoom %>% 
+tmp <- zoom %>% 
   mutate(parallel = threads_per_chain > 0,
          parallel = if_else(parallel, "Parallel", "Not Parallel") %>% 
            factor(levels = c("Not Parallel", "Parallel")),
@@ -96,43 +97,214 @@ p_1 <- zoom %>%
            factor(levels = c("Analytical Threaded",
                              "Linear ODE Threaded",
                              "General ODE Threaded",
-                             "Torsten Group ODE MPI"))) %>% 
-  ggplot() +
-  geom_density(aes(x = TVCL, color = parallel), alpha = 0.1) +
-  theme_bw() +
-  scale_color_manual(name = "Parallel",
-                     values = c("Parallel" = "blue",
-                                "Not Parallel" = "red")) +
-  facet_wrap(~solver, nrow = 1) +
-  theme(legend.position = "top")
+                             "Torsten Group ODE MPI")))
 
-p_2 <- zoom %>% 
-  mutate(parallel = threads_per_chain > 0,
-         parallel = if_else(parallel, "Parallel", "Not Parallel") %>% 
-           factor(levels = c("Not Parallel", "Parallel")),
-         solver = case_when(solver == "analytical" ~ "Analytical Threaded",
-                            solver == "matexp" ~ "Linear ODE Threaded",
-                            solver == "rk45" ~ "General ODE Threaded",
-                            solver == "torsten_general" ~ 
-                              "Torsten Group ODE MPI",
-                            TRUE ~ NA_character_) %>% 
-           factor(levels = c("Analytical Threaded",
-                             "Linear ODE Threaded",
-                             "General ODE Threaded",
-                             "Torsten Group ODE MPI"))) %>% 
-  ggplot() +
-  geom_density(aes(x = TVCL, color = solver), alpha = 0.1) +
-  theme_bw() +
-  scale_color_manual(name = "Solver",
-                     values = c("Analytical Threaded" = "blue",
-                                "Linear ODE Threaded" = "red",
-                                "General ODE Threaded" = "orange",
-                                "Torsten Group ODE MPI" = "magenta")) +
-  facet_wrap(~parallel, nrow = 1) +
-  theme(legend.position = "bottom")
-    
-p_1 /
-  p_2
+(p_1_tvcl <- tmp %>% 
+    bind_rows(tmp %>% 
+                filter(solver == "General ODE Threaded", 
+                       parallel == "Not Parallel") %>% 
+                mutate(solver = "Torsten Group ODE MPI")) %>%
+    mutate(solver = factor(solver, levels = c("Analytical Threaded",
+                                              "Linear ODE Threaded",
+                                              "General ODE Threaded",
+                                              "Torsten Group ODE MPI")),
+           parallel = factor(parallel, levels = c("Not Parallel", "Parallel"))) %>%
+    select(starts_with("TV"), solver, parallel) %>% 
+    pivot_longer(cols = starts_with("TV"), 
+                 names_to = "Variable", 
+                 values_to = "Value") %>% 
+    mutate(Variable = factor(Variable, levels = c("TVCL", "TVVC", "TVKA"))) %>% 
+    filter(Variable == "TVCL") %>% 
+    ggplot() +
+    geom_density(aes(x = Value, color = parallel), alpha = 0.1) +
+    theme_bw() +
+    scale_color_manual(name = "Parallel",
+                       values = c("Parallel" = "blue",
+                                  "Not Parallel" = "red")) +
+    facet_grid(Variable ~ solver, scales = "free") +
+    # facet_wrap(Variable ~ solver, scales = "free") +
+    theme(legend.position = "top",
+          axis.title.x = element_blank(),
+          axis.title.y = element_blank()))
+
+(p_1_tvvc <- tmp %>% 
+    bind_rows(tmp %>% 
+                filter(solver == "General ODE Threaded", 
+                       parallel == "Not Parallel") %>% 
+                mutate(solver = "Torsten Group ODE MPI")) %>%
+    mutate(solver = factor(solver, levels = c("Analytical Threaded",
+                                              "Linear ODE Threaded",
+                                              "General ODE Threaded",
+                                              "Torsten Group ODE MPI")),
+           parallel = factor(parallel, levels = c("Not Parallel", "Parallel"))) %>%
+    select(starts_with("TV"), solver, parallel) %>% 
+    pivot_longer(cols = starts_with("TV"), 
+                 names_to = "Variable", 
+                 values_to = "Value") %>% 
+    mutate(Variable = factor(Variable, levels = c("TVCL", "TVVC", "TVKA"))) %>% 
+    filter(Variable == "TVVC") %>% 
+    ggplot() +
+    geom_density(aes(x = Value, color = parallel), alpha = 0.1) +
+    theme_bw() +
+    scale_color_manual(name = "Parallel",
+                       values = c("Parallel" = "blue",
+                                  "Not Parallel" = "red")) +
+    facet_grid(Variable ~ solver, scales = "free") +
+    # facet_wrap(Variable ~ solver, scales = "free") +
+    theme(legend.position = "none",
+          axis.title.x = element_blank()))
+
+(p_1_tvka <- tmp %>% 
+    bind_rows(tmp %>% 
+                filter(solver == "General ODE Threaded", 
+                       parallel == "Not Parallel") %>% 
+                mutate(solver = "Torsten Group ODE MPI")) %>%
+    mutate(solver = factor(solver, levels = c("Analytical Threaded",
+                                              "Linear ODE Threaded",
+                                              "General ODE Threaded",
+                                              "Torsten Group ODE MPI")),
+           parallel = factor(parallel, levels = c("Not Parallel", "Parallel"))) %>%
+    select(starts_with("TV"), solver, parallel) %>% 
+    pivot_longer(cols = starts_with("TV"), 
+                 names_to = "Variable", 
+                 values_to = "Value") %>% 
+    mutate(Variable = factor(Variable, levels = c("TVCL", "TVVC", "TVKA"))) %>% 
+    filter(Variable == "TVKA") %>% 
+    ggplot() +
+    geom_density(aes(x = Value, color = parallel), alpha = 0.1) +
+    theme_bw() +
+    scale_color_manual(name = "Parallel",
+                       values = c("Parallel" = "blue",
+                                  "Not Parallel" = "red")) +
+    facet_grid(Variable ~ solver, scales = "free") +
+    # facet_wrap(Variable ~ solver, scales = "free") +
+    theme(legend.position = "none",
+          axis.title.y = element_blank()))
+
+(p_2_tvcl <- tmp %>% 
+    bind_rows(tmp %>% 
+                filter(solver == "General ODE Threaded", 
+                       parallel == "Not Parallel") %>% 
+                mutate(solver = "Torsten Group ODE MPI")) %>%
+    mutate(solver = factor(solver, levels = c("Analytical Threaded",
+                                              "Linear ODE Threaded",
+                                              "General ODE Threaded",
+                                              "Torsten Group ODE MPI")),
+           parallel = factor(parallel, levels = c("Not Parallel", "Parallel"))) %>%
+    select(starts_with("TV"), solver, parallel) %>% 
+    pivot_longer(cols = starts_with("TV"), 
+                 names_to = "Variable", 
+                 values_to = "Value") %>% 
+    mutate(Variable = factor(Variable, levels = c("TVCL", "TVVC", "TVKA"))) %>% 
+    filter(Variable == "TVCL") %>% 
+    ggplot() +
+    geom_density(aes(x = Value, color = solver), alpha = 0.1) +
+    theme_bw() +
+    scale_color_manual(name = "Solver",
+                       values = c("Analytical Threaded" = "purple",
+                                  "Linear ODE Threaded" = "darkgreen",
+                                  "General ODE Threaded" = "orange",
+                                  "Torsten Group ODE MPI" = "magenta")) +
+    facet_grid(Variable ~ parallel, scales = "free") +
+    # facet_wrap(Variable ~ parallel, scales = "free") +
+    theme(legend.position = "none",
+          axis.title.x = element_blank(),
+          axis.title.y = element_blank()))
+
+(p_2_tvvc <- tmp %>% 
+    bind_rows(tmp %>% 
+                filter(solver == "General ODE Threaded", 
+                       parallel == "Not Parallel") %>% 
+                mutate(solver = "Torsten Group ODE MPI")) %>%
+    mutate(solver = factor(solver, levels = c("Analytical Threaded",
+                                              "Linear ODE Threaded",
+                                              "General ODE Threaded",
+                                              "Torsten Group ODE MPI")),
+           parallel = factor(parallel, levels = c("Not Parallel", "Parallel"))) %>%
+    select(starts_with("TV"), solver, parallel) %>% 
+    pivot_longer(cols = starts_with("TV"), 
+                 names_to = "Variable", 
+                 values_to = "Value") %>% 
+    mutate(Variable = factor(Variable, levels = c("TVCL", "TVVC", "TVKA"))) %>% 
+    filter(Variable == "TVVC") %>% 
+    ggplot() +
+    geom_density(aes(x = Value, color = solver), alpha = 0.1) +
+    theme_bw() +
+    scale_color_manual(name = "Solver",
+                       values = c("Analytical Threaded" = "purple",
+                                  "Linear ODE Threaded" = "darkgreen",
+                                  "General ODE Threaded" = "orange",
+                                  "Torsten Group ODE MPI" = "magenta")) +
+    facet_grid(Variable ~ parallel, scales = "free") +
+    # facet_wrap(Variable ~ parallel, scales = "free") +
+    theme(legend.position = "none",
+          axis.title.x = element_blank()))
+
+(p_2_tvka <- tmp %>% 
+    bind_rows(tmp %>% 
+                filter(solver == "General ODE Threaded", 
+                       parallel == "Not Parallel") %>% 
+                mutate(solver = "Torsten Group ODE MPI")) %>%
+    mutate(solver = factor(solver, levels = c("Analytical Threaded",
+                                              "Linear ODE Threaded",
+                                              "General ODE Threaded",
+                                              "Torsten Group ODE MPI")),
+           parallel = factor(parallel, levels = c("Not Parallel", "Parallel"))) %>%
+    select(starts_with("TV"), solver, parallel) %>% 
+    pivot_longer(cols = starts_with("TV"), 
+                 names_to = "Variable", 
+                 values_to = "Value") %>% 
+    mutate(Variable = factor(Variable, levels = c("TVCL", "TVVC", "TVKA"))) %>% 
+    filter(Variable == "TVKA") %>% 
+    ggplot() +
+    geom_density(aes(x = Value, color = solver), alpha = 0.1) +
+    theme_bw() +
+    scale_color_manual(name = "Solver",
+                       values = c("Analytical Threaded" = "purple",
+                                  "Linear ODE Threaded" = "darkgreen",
+                                  "General ODE Threaded" = "orange",
+                                  "Torsten Group ODE MPI" = "magenta")) +
+    facet_grid(Variable ~ parallel, scales = "free") +
+    # facet_wrap(Variable ~ parallel, scales = "free") +
+    theme(legend.position = "bottom",
+          axis.title.y = element_blank()))
+
+
+p_1_tvcl /
+  p_1_tvvc /
+  p_1_tvka /
+  p_2_tvcl /
+  p_2_tvvc /
+  p_2_tvka
+
+boo <- zoom %>% 
+  group_by(solver, threads_per_chain, run_number) %>% 
+  distinct(time) %>% 
+  ungroup(run_number) %>%
+  arrange(time, .by_group = TRUE) %>% 
+  slice(-c(1, n())) %>% 
+  inner_join(zoom, 
+             by = c("solver", "run_number", "threads_per_chain", "time"))
+
+all_summary_tables <- zoom %>% 
+  group_by(solver, threads_per_chain, run_number) %>% 
+  distinct(time) %>% 
+  ungroup(run_number) %>%
+  arrange(time, .by_group = TRUE) %>% 
+  slice(-c(1, n())) %>% 
+  inner_join(zoom, 
+             by = c("solver", "run_number", "threads_per_chain", "time")) %>% 
+  group_by(solver, threads_per_chain, run_number, time) %>% 
+  group_modify(~ { 
+    .x %>%
+      select(-contains("omega"), -contains("sigma")) %>%
+      as_draws_array() %>%
+      summarize_draws(mean, median, sd, mcse_mean,
+                      ~quantile2(.x, probs = c(0.025, 0.975)), rhat,
+                      ess_bulk, ess_tail)
+  }) %>% 
+  ungroup()
+
 
 zoom %>% 
   group_by(solver, threads_per_chain, run_number) %>% 
