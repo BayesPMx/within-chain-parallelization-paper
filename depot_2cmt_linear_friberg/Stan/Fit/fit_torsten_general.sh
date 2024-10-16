@@ -1,11 +1,7 @@
 #!/bin/bash
 
-# njobs=(1 4 12 24)
-# chain=(1 2 3 4)
-
-
-njobs=(24)
-chain=(1)
+njobs=(1 4 12 24)
+chain=(1 2 3 4)
 
 for i in "${njobs[@]}";
   do
